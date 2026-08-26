@@ -1,0 +1,52 @@
+---
+description: Aeris client UI — Tailwind tokens, layered components, config-driven routing.
+globs: client/**/*.{ts,tsx,css}
+alwaysApply: false
+---
+
+# Client UI
+
+Full spec: `AGENTS.md` → Frontend.
+
+## Tokens
+
+Define colors, radius, fonts, and semantic spacing in `client/src/index.css` via `@theme`. Components use token utilities (`bg-surface`, `text-fg`, `rounded-md`), not `bg-blue-500`.
+
+Layout utilities (`flex`, `grid`, `gap-4`) are fine.
+
+## Component layers
+
+Same composition rules as a design system. Folder names are ordinary:
+
+```
+client/src/components/ui/         # Button, Input, Text, Icon, Spinner
+client/src/components/patterns/   # FormField, SearchBar, NavItem
+client/src/components/sections/   # Header, Sidebar, LoginForm
+```
+
+- **ui**: one primitive. No routes, no API, no feature imports.
+- **patterns**: a few `ui` pieces together. Local UI state only.
+- **sections**: a full block (header, form, table). Data via props.
+- **pages**: wire sections to routes and data.
+
+Do not copy the same button/input markup into a second file. Put it in `ui`.
+
+## Routing
+
+Use `react-router-dom`. Route table in `client/src/config/routes.ts`.
+
+- Layout routes render `<Outlet />`.
+- Auth gates are wrappers (`ProtectedRoute` / `PublicRoute`) that render `<Outlet />` or `<Navigate />`.
+- Pages do not embed a second router.
+
+## Wrappers + config
+
+`client/src/config/ui.ts` owns nav items, page titles, and layout flags. Header/sidebar read config; they do not hardcode the app map.
+
+```tsx
+// BAD
+<button className="bg-blue-600 text-white px-4 py-2 rounded-lg">Save</button>
+
+// GOOD
+<Button variant="primary">Save</Button>
+```

@@ -1,0 +1,38 @@
+---
+description: Aeris API — Flask, Poetry, MySQL, model/view/route, JWT middleware.
+globs: server/**/*.py
+alwaysApply: false
+---
+
+# Server API
+
+Full spec: `AGENTS.md` → Backend.
+
+## Stack
+
+Poetry in `server/`. Flask. `mysql-connector-python`. PyJWT. No SQLAlchemy, no Flask-JWT-Extended unless asked.
+
+## Flow
+
+`route` → `view` → `model` → MySQL. Never skip a layer.
+
+- **model**: SQL only. Fetch/insert. No Flask, no JWT, no response shaping.
+- **view**: call model, validate, hash/check password, issue tokens, shape the dict.
+- **route**: parse HTTP, call view, return JSON + status. No SQL.
+
+## Middleware
+
+Import the shared logger from `log.py`. Request log on every call. JWT guard on every non-public path (`config.PUBLIC_PATHS`). Routes do not re-implement auth. Code lives at `server/` root — no inner package folder.
+
+```python
+# BAD — SQL in a route
+@bp.get("/users/<id>")
+def get_user(id):
+    cur.execute("SELECT * FROM users WHERE id=%s", (id,))
+
+# GOOD
+@bp.get("/users/<id>")
+def get_user(id):
+    body, status = views.user.get_user(id)
+    return body, status
+```
