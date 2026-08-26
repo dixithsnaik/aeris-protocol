@@ -1,6 +1,4 @@
-from mysql.connector.errors import IntegrityError
-
-from db import execute, fetch_one
+from db import IntegrityError, execute, fetch_one
 
 
 def fetch_user_by_phone(phone):

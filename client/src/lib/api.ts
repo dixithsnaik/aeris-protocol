@@ -3,12 +3,13 @@ import { getToken } from "./session";
 import tunnel from "../config/tunnel.json" with { type: "json" };
 
 function apiBase() {
+  const env = String(import.meta.env.VITE_API_BASE_URL ?? "").replace(/\/$/, "");
   const remote = String(tunnel.baseUrl ?? "").replace(/\/$/, "");
   const host = globalThis.location?.hostname ?? "";
-  if (host && host !== "localhost" && host !== "127.0.0.1") {
-    return remote || globalThis.location.origin.replace(/\/$/, "");
-  }
-  return String(import.meta.env.VITE_API_BASE_URL ?? "").replace(/\/$/, "");
+  const local = !host || host === "localhost" || host === "127.0.0.1";
+  if (local) return env;
+  if (env && !/^https?:\/\/(localhost|127\.0\.0\.1)(:\d+)?$/i.test(env)) return env;
+  return remote || globalThis.location.origin.replace(/\/$/, "");
 }
 
 export type Property = {
@@ -26,6 +27,7 @@ export type Property = {
   image_url: string;
   yoy_pct?: number;
   owned?: boolean;
+  watchers?: number;
 };
 
 export type PropertyAnalytics = {
@@ -275,12 +277,13 @@ export async function markNoticesRead(ids?: number[]) {
 
 export type ListingStatus = "verified" | "pending" | "unverified" | "negotiation";
 
-export type SellerListing = Property & { listing_status: ListingStatus };
+export type SellerListing = Property & { listing_status: ListingStatus; watchers?: number; chats?: number };
 
 export type SellerMetrics = {
   views: number;
   views_delta: number;
   offers: number;
+  chats?: number;
   insight: string;
 };
 
@@ -347,6 +350,7 @@ export type DeskContact = {
   email: string;
   tracking: boolean;
   messages: number;
+  offer?: number;
   last_at: string;
 };
 

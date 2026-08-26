@@ -1,6 +1,14 @@
 from db import execute, fetch_all, fetch_one
 
 
+def listing_for_user(user_id):
+    row = fetch_one(
+        "SELECT id, title FROM properties WHERE owner_id = %s ORDER BY id DESC LIMIT 1",
+        (user_id,),
+    )
+    return row or fetch_one("SELECT id, title FROM properties ORDER BY id DESC LIMIT 1")
+
+
 def insert_notification(user_id, kind, title, body, href, property_id=None):
     return execute(
         "INSERT INTO notifications (user_id, kind, title, body, href, property_id) "

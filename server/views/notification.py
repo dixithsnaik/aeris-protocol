@@ -1,5 +1,11 @@
 from log import logger
-from models.notification import count_unread, insert_notification, list_notifications, mark_read as stamp_read
+from models.notification import (
+    count_unread,
+    insert_notification,
+    listing_for_user,
+    list_notifications,
+    mark_read as stamp_read,
+)
 
 
 def notify(user_id, kind, title, body, href, property_id=None):
@@ -20,6 +26,27 @@ def notify(user_id, kind, title, body, href, property_id=None):
 
 def listing_path(pid, tab="overview"):
     return f"/buy/{int(pid)}/{tab}"
+
+
+def demo_rows(title, pid):
+    href_m = listing_path(pid, "message") if pid else "/profile"
+    href_o = listing_path(pid) if pid else "/profile"
+    return (
+        ("message", "Buyer messaged you", f"Interested in a site visit this week. · {title}", href_m, pid),
+        ("interest", "Buyer tracking your listing", f"{title} — open Interest & chats to reply.", href_m, pid),
+        ("verify", "Verification pending", f"{title} is with legal review.", href_o, pid),
+        ("message", "Seller replied", f"We can share a watermarked deed after KYC. · {title}", href_m, pid),
+    )
+
+
+def seed_if_empty(user_id):
+    if list_notifications(user_id, 1):
+        return
+    listing = listing_for_user(user_id)
+    pid = int(listing["id"]) if listing else None
+    title = listing["title"] if listing else "your listing"
+    for kind, heading, body, href, prop in demo_rows(title, pid):
+        notify(user_id, kind, heading, body, href, prop)
 
 
 def as_item(row):
@@ -50,6 +77,8 @@ def _ids(raw):
 
 def list_mine(user_id):
     try:
+        # ponytail: empty inbox gets sample rows so the bell UI can be reviewed; real events skip this
+        seed_if_empty(user_id)
         rows = list_notifications(user_id)
         unread = count_unread(user_id)
     except Exception:

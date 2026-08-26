@@ -14,6 +14,7 @@ from models.notification import delete_for_property
 from models.property import (
     add_interest,
     count_properties,
+    count_watchers,
     delete_listing,
     fetch_property,
     insert_listing,
@@ -142,7 +143,13 @@ def get_property(pid, user_id=None):
 
 def _public_item(row, user_id=None):
     item = _item(row)
-    item["owned"] = bool(user_id and row.get("owner_id") is not None and int(row["owner_id"]) == int(user_id))
+    owned = bool(user_id and row.get("owner_id") is not None and int(row["owner_id"]) == int(user_id))
+    item["owned"] = owned
+    if owned:
+        try:
+            item["watchers"] = count_watchers(row["id"], user_id)
+        except Exception:
+            item["watchers"] = 0
     return item
 
 
@@ -322,6 +329,7 @@ def delete_owned(user_id, pid):
 
 
 def _contact(row, tracking=False, messages=0, last_at=None):
+    offer = row.get("offer_inr")
     return {
         "id": int(row["id"]),
         "name": (row.get("name") or "").strip(),
@@ -329,6 +337,7 @@ def _contact(row, tracking=False, messages=0, last_at=None):
         "email": (row.get("email") or "").strip(),
         "tracking": tracking,
         "messages": int(messages or 0),
+        "offer": int(offer) if offer else 0,
         "last_at": str(last_at) if last_at else "",
     }
 
@@ -423,10 +432,11 @@ def send_message(user_id, pid, body, buyer_id=None):
         other = bid if is_owner else (int(owner) if owner is not None else None)
         if other and int(other) != int(user_id):
             preview = text if len(text) <= 80 else text[:79] + "…"
+            heading = "Seller replied" if is_owner else "Buyer messaged you"
             notify(
                 other,
                 "message",
-                "New message",
+                heading,
                 f"{preview} · {row['title']}",
                 listing_path(n, "message"),
                 n,
@@ -461,6 +471,8 @@ def listing_status(row):
 def _seller_item(row):
     item = _item(row)
     item["listing_status"] = listing_status(row)
+    item["watchers"] = int(row.get("watchers") or 0)
+    item["chats"] = int(row.get("chats") or 0)
     return item
 
 
@@ -471,14 +483,21 @@ def list_mine(user_id):
         logger.exception("seller list failed")
         return {"error": "cannot connect to mysql"}, 503
     items = [_seller_item(row) for row in rows]
-    # ponytail: views are display-only until a real analytics table exists
+    watchers = sum(row["watchers"] for row in items)
+    chats = sum(row["chats"] for row in items)
+    # ponytail: view counts are display-only until a real analytics table exists
     return {
         "items": items,
         "metrics": {
             "views": 1200 * len(items) + 208,
             "views_delta": 12.4,
-            "offers": sum(1 for row in rows if row["status"] == "Under Offer"),
-            "insight": "Demand in the CBD sector is up 8% this week.",
+            "offers": watchers,
+            "chats": chats,
+            "insight": (
+                "A buyer tracked or messaged a listing. Open Interest & chats to reply."
+                if watchers or chats
+                else "When a buyer tracks or messages, the bell lights up and they appear on that listing."
+            ),
         },
     }, 200
 
@@ -506,8 +525,8 @@ def watch_add(user_id, pid):
             notify(
                 owner,
                 "interest",
-                "New watcher",
-                f"Someone tracked {row['title']}.",
+                "Buyer tracking your listing",
+                f"{row['title']} — open Interest & chats to reply.",
                 listing_path(n, "message"),
                 n,
             )

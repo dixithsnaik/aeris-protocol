@@ -1,9 +1,7 @@
 from pathlib import Path
 from random import Random
 
-from mysql.connector.errors import IntegrityError
-
-from db import execute, executemany, fetch_all, fetch_one
+from db import IntegrityError, execute, executemany, fetch_all, fetch_one
 from location import expand_location_query
 
 _REMOTE = (
@@ -98,11 +96,21 @@ def fetch_property(pid):
 
 def list_owned(owner_id):
     return fetch_all(
-        "SELECT id, title, location, config, price, area_sqft, status, yield_pct, "
-        "yoy_pct, verified, verify_pending, featured, image_url FROM properties "
-        "WHERE owner_id = %s ORDER BY id DESC",
+        "SELECT p.id, p.title, p.location, p.config, p.price, p.area_sqft, p.status, p.yield_pct, "
+        "p.yoy_pct, p.verified, p.verify_pending, p.featured, p.image_url, "
+        "(SELECT COUNT(*) FROM interests i WHERE i.property_id = p.id AND i.user_id <> p.owner_id) AS watchers, "
+        "(SELECT COUNT(DISTINCT m.buyer_id) FROM messages m WHERE m.property_id = p.id AND m.buyer_id <> p.owner_id) AS chats "
+        "FROM properties p WHERE p.owner_id = %s ORDER BY p.id DESC",
         (owner_id,),
     )
+
+
+def count_watchers(pid, owner_id):
+    row = fetch_one(
+        "SELECT COUNT(*) AS n FROM interests WHERE property_id = %s AND user_id <> %s",
+        (pid, owner_id),
+    )
+    return int(row["n"]) if row else 0
 
 
 def insert_listing(owner_id, title, location, config, price, area_sqft, image_url):
@@ -161,9 +169,16 @@ def remove_interest(user_id, pid):
     execute("DELETE FROM interests WHERE user_id = %s AND property_id = %s", (user_id, pid))
 
 
+def set_offer(user_id, pid, amount):
+    execute(
+        "UPDATE interests SET offer_inr = %s WHERE user_id = %s AND property_id = %s",
+        (amount, user_id, pid),
+    )
+
+
 def list_watchers(pid, owner_id):
     return fetch_all(
-        "SELECT u.id, u.name, u.phone, u.email, i.created_at "
+        "SELECT u.id, u.name, u.phone, u.email, i.offer_inr, i.created_at "
         "FROM interests i INNER JOIN users u ON u.id = i.user_id "
         "WHERE i.property_id = %s AND i.user_id <> %s ORDER BY i.id DESC",
         (pid, owner_id),

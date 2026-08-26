@@ -1,6 +1,6 @@
 import unittest
 
-from views.notification import _ids, as_item, listing_path
+from views.notification import _ids, as_item, demo_rows, listing_path
 
 
 class NotificationViewTests(unittest.TestCase):
@@ -25,6 +25,14 @@ class NotificationViewTests(unittest.TestCase):
         self.assertEqual(listing_path(3, "message"), "/buy/3/message")
         row["read_at"] = "2026-08-26 12:01:00"
         self.assertTrue(as_item(row)["read"])
+
+    def test_demo_rows_use_listing_not_a_phone(self):
+        rows = demo_rows("Whitefield Commons", 81)
+        self.assertEqual(len(rows), 4)
+        kinds = {row[0] for row in rows}
+        self.assertEqual(kinds, {"message", "interest", "verify"})
+        for row in rows:
+            self.assertIn("/buy/81/", row[3])
 
 
 if __name__ == "__main__":

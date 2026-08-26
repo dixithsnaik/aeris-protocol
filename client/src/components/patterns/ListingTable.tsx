@@ -46,6 +46,13 @@ export function ListingTable({ items, from, onRemove, onDelete }: Props) {
               <td className="py-4">
                 <p className="font-serif text-lg text-fg">{item.title}</p>
                 <p className="font-mono text-[11px] text-muted">ID: {propertyCode(item.id)}</p>
+                {item.watchers || item.chats ? (
+                  <p className="mt-1 font-mono text-[11px] text-brand">
+                    {item.watchers ? `${item.watchers} tracking` : ""}
+                    {item.watchers && item.chats ? " · " : ""}
+                    {item.chats ? `${item.chats} in chat` : ""}
+                  </p>
+                ) : null}
               </td>
               <td className="py-4 font-mono text-sm text-fg">{inr(item.price)}</td>
               <td className="py-4">
@@ -64,6 +71,15 @@ export function ListingTable({ items, from, onRemove, onDelete }: Props) {
                   >
                     {profile.view}
                   </Link>
+                  {onDelete ? (
+                    <Link
+                      to={propertyPath(item.id, "message")}
+                      state={{ from }}
+                      className="font-mono text-[11px] uppercase tracking-[0.16em] text-fg underline"
+                    >
+                      {ui.property.desk}
+                    </Link>
+                  ) : null}
                   {onRemove ? (
                     <button
                       type="button"

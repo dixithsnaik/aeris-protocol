@@ -39,6 +39,7 @@ CREATE TABLE interests (
   id INT PRIMARY KEY AUTO_INCREMENT,
   user_id INT NOT NULL,
   property_id INT NOT NULL,
+  offer_inr BIGINT NULL,
   created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
   UNIQUE KEY uniq_interest (user_id, property_id),
   INDEX idx_user (user_id),

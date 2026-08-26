@@ -54,7 +54,15 @@ export function NotificationBell() {
       navigate(paths.login, { state: { from: location.pathname } });
       return;
     }
-    setOpen((on) => !on);
+    setOpen((on) => {
+      if (!on) {
+        void fetchNotices().then((data) => {
+          setItems(data.items);
+          setUnread(data.unread);
+        });
+      }
+      return !on;
+    });
   }
 
   async function onPick(item: Notice) {

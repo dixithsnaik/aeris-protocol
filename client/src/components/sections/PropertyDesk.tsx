@@ -3,6 +3,7 @@ import { Button } from "../ui/Button";
 import { Label } from "../ui/Label";
 import { ui } from "../../config/ui";
 import { fetchDesk, fetchThread, sendChat, type ChatLine, type DeskContact, type Property } from "../../lib/api";
+import { inr } from "../../lib/money";
 
 type Props = {
   item: Property;
@@ -19,9 +20,15 @@ export function PropertyDesk({ item }: Props) {
   const [lines, setLines] = useState<ChatLine[]>([]);
   const [body, setBody] = useState("");
   const [busy, setBusy] = useState(false);
+  const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    void fetchDesk(item.id).then(setPeople);
+    setLoading(true);
+    void fetchDesk(item.id).then((rows) => {
+      setPeople(rows);
+      setBuyerId((current) => current ?? rows[0]?.id ?? null);
+      setLoading(false);
+    });
   }, [item.id]);
 
   useEffect(() => {
@@ -49,25 +56,39 @@ export function PropertyDesk({ item }: Props) {
     <div>
       <h1 className="font-serif text-3xl text-fg sm:text-4xl">{copy.deskTitle}</h1>
       <p className="mt-2 max-w-xl font-mono text-xs text-muted">{copy.deskBody}</p>
-      {people.length === 0 ? (
+      <p className="mt-3 font-mono text-sm text-fg">
+        {copy.ask} {inr(item.price)}
+      </p>
+      {loading ? (
+        <p className="mt-8 font-mono text-sm text-muted">{ui.property.loading}</p>
+      ) : people.length === 0 ? (
         <p className="mt-8 font-mono text-sm text-muted">{copy.deskEmpty}</p>
       ) : (
-        <div className="mt-8 grid gap-8 lg:grid-cols-[16rem_1fr]">
+        <div className="mt-8 grid gap-8 lg:grid-cols-[18rem_1fr]">
           <ul className="flex flex-col gap-1">
-            {people.map((row) => (
+            {people.map((row) => {
+              const on = buyerId === row.id;
+              const pct = item.price && row.offer ? Math.round((row.offer / item.price) * 100) : 0;
+              return (
               <li key={row.id}>
                 <button
                   type="button"
-                  className={`w-full px-3 py-3 text-left ${buyerId === row.id ? "bg-ink text-surface" : "border border-line bg-surface text-fg"}`}
+                  className={`w-full px-3 py-3 text-left ${on ? "bg-ink text-surface" : "border border-line bg-surface text-fg"}`}
                   onClick={() => setBuyerId(row.id)}
                 >
                   <p className="font-serif text-lg">{label(row)}</p>
-                  <p className={`mt-1 font-mono text-[11px] ${buyerId === row.id ? "text-surface/70" : "text-muted"}`}>
+                  {row.offer ? (
+                    <p className={`mt-1 font-mono text-[11px] ${on ? "text-surface/80" : "text-fg"}`}>
+                      {copy.offer} {inr(row.offer)} · {pct}% {copy.ofAsk}
+                    </p>
+                  ) : null}
+                  <p className={`mt-1 font-mono text-[11px] ${on ? "text-surface/70" : "text-muted"}`}>
                     {row.tracking ? copy.trackingNow : copy.inChat} · {row.messages} {copy.chatCount}
                   </p>
                 </button>
               </li>
-            ))}
+              );
+            })}
           </ul>
           <div>
             {buyerId ? (

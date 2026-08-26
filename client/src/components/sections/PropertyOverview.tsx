@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { useLocation } from "react-router-dom";
+import { Link, useLocation } from "react-router-dom";
 import check from "../../assets/landing/check.svg";
 import fail from "../../assets/property/fail.svg";
 import pending from "../../assets/property/timeline.svg";
@@ -126,6 +126,14 @@ export function PropertyOverview({ item, onItem }: Props) {
             <Button variant="primary" className="px-4 py-2" onClick={() => go(verifyPath(item.id))}>
               {copy.subscribeVerify}
             </Button>
+          ) : null}
+          {owned && (item.watchers ?? 0) > 0 ? (
+            <Link
+              to={propertyPath(item.id, "message")}
+              className="inline-flex items-center px-4 py-2 font-mono text-xs uppercase tracking-[0.12em] text-brand sm:text-sm"
+            >
+              {copy.ownerInterest.replace("{n}", String(item.watchers))}
+            </Link>
           ) : null}
           {owned ? null : (
             <Button variant="outline" className="px-4 py-2" disabled={busy} onClick={() => void onTrack()}>
