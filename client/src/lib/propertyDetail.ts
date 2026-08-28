@@ -49,11 +49,6 @@ export function deedId(id: number) {
   return `SD-${String(id).padStart(6, "0")}`;
 }
 
-export function ledgerHash(id: number) {
-  const n = (id * 2654435761) >>> 0;
-  return `0x${n.toString(16).padStart(8, "0")}a7c3e91f`;
-}
-
 export function annualNet(item: Property) {
   return Math.round((item.price * item.yield_pct) / 100);
 }

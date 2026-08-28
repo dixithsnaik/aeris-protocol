@@ -16,6 +16,7 @@ import { ProfilePage } from "../pages/profile/ProfilePage";
 import { VerifyPage } from "../pages/property/VerifyPage";
 import { LoginPage } from "../pages/auth/LoginPage";
 import { LandingPage } from "../pages/landing/LandingPage";
+import { PassportPage } from "../pages/passport/PassportPage";
 import { ProtectedRoute } from "../routes/ProtectedRoute";
 import { PublicRoute } from "../routes/PublicRoute";
 
@@ -27,6 +28,7 @@ export function AppRouter() {
           <Route path={paths.home} element={<LandingPage />} />
           <Route path={paths.buy} element={<BuyPage />} />
           <Route element={<ProtectedRoute />}>
+            <Route path={paths.passport} element={<PassportPage />} />
             <Route path={`${paths.buy}/:id/verify`} element={<VerifyPage />} />
             <Route path={paths.sell} element={<SellPage />} />
             <Route path={paths.sellNew} element={<AddPropertyPage />} />

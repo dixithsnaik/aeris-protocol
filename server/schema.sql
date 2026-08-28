@@ -28,6 +28,7 @@ CREATE TABLE properties (
   featured TINYINT(1) NOT NULL DEFAULT 0,
   owner_id INT NULL,
   image_url VARCHAR(500) NOT NULL,
+  chain_token VARCHAR(64) NULL,
   created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
   INDEX idx_config (config),
   INDEX idx_price (price),

@@ -20,6 +20,9 @@ export function Hero() {
         <Button variant="outline" onClick={() => navigate(paths.buy)}>
           {ui.landing.buy}
         </Button>
+        <Button variant="outline" onClick={() => go(paths.passport)}>
+          {ui.landing.verify}
+        </Button>
       </div>
     </section>
   );

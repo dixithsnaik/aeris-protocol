@@ -42,6 +42,7 @@ export default defineConfig(({ mode }) => {
         "/auth": api,
         "/health": api,
         "/properties": api,
+        "/passport/verify": api,
         "/static": api,
       },
     },

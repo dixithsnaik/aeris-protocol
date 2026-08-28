@@ -44,6 +44,7 @@ CREATE TABLE properties (
   featured TINYINT(1) NOT NULL DEFAULT 0,
   owner_id INT NULL,
   image_url VARCHAR(500) NOT NULL,
+  chain_token VARCHAR(64) NULL,
   created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
   INDEX idx_config (config),
   INDEX idx_price (price),
@@ -121,6 +122,7 @@ _SQLITE_TABLES = (
       featured INTEGER NOT NULL DEFAULT 0,
       owner_id INTEGER,
       image_url TEXT NOT NULL,
+      chain_token TEXT,
       created_at TEXT DEFAULT CURRENT_TIMESTAMP
     )
     """,
@@ -244,6 +246,8 @@ def _ensure_sqlite(conn):
         conn.execute("ALTER TABLE properties ADD COLUMN owner_id INTEGER")
     if "verify_pending" not in cols:
         conn.execute("ALTER TABLE properties ADD COLUMN verify_pending INTEGER NOT NULL DEFAULT 0")
+    if "chain_token" not in cols:
+        conn.execute("ALTER TABLE properties ADD COLUMN chain_token TEXT")
     cols = _sqlite_cols(conn, "interests")
     if "offer_inr" not in cols:
         conn.execute("ALTER TABLE interests ADD COLUMN offer_inr INTEGER")
@@ -304,6 +308,8 @@ def ensure_schema():
             cur.execute("ALTER TABLE properties ADD INDEX idx_owner (owner_id)")
         if "verify_pending" not in cols:
             cur.execute("ALTER TABLE properties ADD verify_pending TINYINT(1) NOT NULL DEFAULT 0")
+        if "chain_token" not in cols:
+            cur.execute("ALTER TABLE properties ADD chain_token VARCHAR(64) NULL")
     cur.execute("SHOW TABLES LIKE 'interests'")
     if not cur.fetchone():
         cur.execute(_INTERESTS_DDL)

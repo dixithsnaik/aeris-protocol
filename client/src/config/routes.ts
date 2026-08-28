@@ -5,6 +5,7 @@ export const paths = {
   sell: "/sell",
   sellNew: "/sell/new",
   profile: "/profile",
+  passport: "/passport",
 } as const;
 
 export const propertyTabs = ["overview", "contracts", "financials", "timeline", "support", "message"] as const;

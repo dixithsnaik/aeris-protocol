@@ -7,7 +7,7 @@ import check from "../../assets/landing/check.svg";
 import { Button } from "../ui/Button";
 import { Icon } from "../ui/Icon";
 import { ui } from "../../config/ui";
-import { type Property } from "../../lib/api";
+import { downloadPassport, type Property } from "../../lib/api";
 import { inr } from "../../lib/money";
 import { deedId, renewalDays, taxDue } from "../../lib/propertyDetail";
 
@@ -43,11 +43,15 @@ export function PropertyVault({ item }: Props) {
             <p className="mt-3 font-mono text-[11px] uppercase tracking-[0.16em] text-muted">{copy.encrypted}</p>
           </div>
           <div className="mt-6 flex flex-col gap-3 sm:flex-row">
-            <Button variant="inverse" className="flex-1 px-4 py-2" onClick={() => setNote(copy.demoNote)}>
+            <Button variant="inverse" className="flex-1 px-4 py-2" onClick={() => setNote(copy.encrypted)}>
               {copy.viewDoc}
             </Button>
-            <Button variant="outline" className="flex-1 px-4 py-2" onClick={() => setNote(copy.demoNote)}>
-              {copy.downloadPdf}
+            <Button
+              variant="outline"
+              className="flex-1 px-4 py-2"
+              onClick={() => void downloadPassport(item.id).then((ok) => setNote(ok ? copy.downloadPassport : copy.demoNote))}
+            >
+              {copy.downloadPassport}
             </Button>
           </div>
         </article>

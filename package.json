@@ -2,9 +2,10 @@
   "name": "aeris-proj",
   "private": true,
   "scripts": {
-    "dev": "concurrently -k -n client,server -c cyan,green \"npm run dev --prefix client\" \"npm run server\"",
+    "dev": "concurrently -k -n client,server,chain -c cyan,green,yellow \"npm run dev --prefix client\" \"npm run server\" \"npm run chain\"",
     "server": "node scripts/run-server.mjs",
-    "ngrok": "concurrently -k -n client,server,ngrok -c cyan,green,magenta \"npm run dev --prefix client\" \"npm run server\" \"node scripts/ngrok.mjs\""
+    "chain": "node scripts/run-chain.mjs",
+    "ngrok": "concurrently -k -n client,server,chain,ngrok -c cyan,green,yellow,magenta \"npm run dev --prefix client\" \"npm run server\" \"npm run chain\" \"node scripts/ngrok.mjs\""
   },
   "devDependencies": {
     "@ngrok/ngrok": "^1.7.0",

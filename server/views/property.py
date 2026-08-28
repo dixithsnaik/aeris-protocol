@@ -9,6 +9,7 @@ from views.verify import (
     quote,
     razorpay_keys,
 )
+from views.chain import inspect_token, mint_signoff
 from views.notification import listing_path, notify
 from models.notification import delete_for_property
 from models.property import (
@@ -28,6 +29,7 @@ from models.property import (
     mark_verify_pending,
     remove_interest,
     search_properties,
+    set_chain_token,
     stats_properties,
     update_listing,
 )
@@ -61,6 +63,7 @@ def _item(row):
         "verify_pending": bool(row.get("verify_pending")),
         "featured": bool(row["featured"]),
         "image_url": row["image_url"],
+        "chain_token": str(row["chain_token"] or "") if row.get("chain_token") else "",
     }
     if row.get("yoy_pct") is not None:
         out["yoy_pct"] = float(row["yoy_pct"])
@@ -142,7 +145,10 @@ def get_property(pid, user_id=None):
 
 
 def _public_item(row, user_id=None):
+    from views.passport import _root, _seals
+
     item = _item(row)
+    item["seal_root"] = _root(_seals(row))
     owned = bool(user_id and row.get("owner_id") is not None and int(row["owner_id"]) == int(user_id))
     item["owned"] = owned
     if owned:
@@ -290,29 +296,116 @@ def approve_verify(user_id, pid):
     row, err = _owned_row(user_id, pid)
     if err:
         return err
+    issued = None
+    token = ""
+    fresh = not row["verified"]
     try:
-        # ponytail: lawyer portal stamps this; seller UI does not call it
-        if not row["verified"]:
+        # ponytail: lawyer portal stamps this; owner overview uses the same route until a portal exists
+        if fresh:
             if not row.get("verify_pending"):
                 return {"error": "pay for verification first"}, 400
             mark_verified(row["id"])
             row = fetch_property(row["id"])
+        else:
+            row = fetch_property(row["id"])
+        issued = mint_signoff(row["id"], row["title"])
+        token = (issued or {}).get("token") or ""
+        if token:
+            set_chain_token(row["id"], token)
+            row = fetch_property(row["id"])
+        if fresh:
+            extra = f" Block token: {token}" if token else ""
             notify(
                 row.get("owner_id") or user_id,
                 "verify",
                 "Listing verified",
-                f"{row['title']} is now verified on the ledger.",
+                f"{row['title']} is now verified on the ledger.{extra}",
                 listing_path(row["id"]),
                 row["id"],
             )
-        else:
-            row = fetch_property(row["id"])
     except Exception:
         logger.exception("verify approve failed")
         return {"error": "cannot connect to mysql"}, 503
     if not row:
         return {"error": "not found"}, 404
-    return _public_item(row, user_id), 200
+    item = _public_item(row, user_id)
+    if token:
+        item["issued_token"] = token
+    return item, 200
+
+
+def _chain_payload(pid, found):
+    if not found or int(found.get("property_id") or 0) != int(pid):
+        return {"error": "token does not match this listing"}, 400
+    return {
+        "token": found["token"],
+        "hash": found["hash"],
+        "height": found["height"],
+        "confirmations": found["confirmations"],
+        "trust": found["trust"],
+        "label": found["label"],
+    }, 200
+
+
+def listing_chain(pid):
+    n = _num(pid)
+    if n is None or n < 1:
+        return {"error": "not found"}, 404
+    try:
+        row = fetch_property(n)
+    except Exception:
+        logger.exception("chain listing failed")
+        return {"error": "cannot connect to mysql"}, 503
+    if not row:
+        return {"error": "not found"}, 404
+    token = str(row.get("chain_token") or "")
+    if not token:
+        return {"token": "", "trust": 0, "label": "none"}, 200
+    found = inspect_token(token)
+    if not found:
+        return {"token": token, "trust": 0, "label": "none", "error": "chain unreachable"}, 200
+    body, status = _chain_payload(n, found)
+    if status != 200:
+        return {"token": token, "trust": 0, "label": "none"}, 200
+    return body, 200
+
+
+def check_chain(pid, token):
+    n = _num(pid)
+    if n is None or n < 1:
+        return {"error": "not found"}, 404
+    try:
+        row = fetch_property(n)
+    except Exception:
+        logger.exception("chain check failed")
+        return {"error": "cannot connect to mysql"}, 503
+    if not row:
+        return {"error": "not found"}, 404
+    found = inspect_token(token)
+    if not found:
+        return {"error": "unknown token"}, 404
+    return _chain_payload(n, found)
+
+
+def attach_chain(user_id, pid, token):
+    row, err = _owned_row(user_id, pid)
+    if err:
+        return err
+    found = inspect_token(token)
+    if not found:
+        return {"error": "unknown token"}, 404
+    body, status = _chain_payload(row["id"], found)
+    if status != 200:
+        return body, status
+    try:
+        set_chain_token(row["id"], found["token"])
+        row = fetch_property(row["id"])
+    except Exception:
+        logger.exception("chain attach failed")
+        return {"error": "cannot connect to mysql"}, 503
+    item = _public_item(row, user_id)
+    item.update(body)
+    return item, 200
 
 
 def delete_owned(user_id, pid):

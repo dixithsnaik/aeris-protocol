@@ -17,6 +17,9 @@ def jwt_guard():
     if request.method == "GET" and _public_property_get(path):
         _optional_user()
         return None
+    if request.method == "POST" and _public_chain_check(path):
+        _optional_user()
+        return None
     header = request.headers.get("Authorization", "")
     if not header.startswith("Bearer "):
         logger.info("auth missing on %s", path)
@@ -48,4 +51,20 @@ def _public_property_get(path):
     if path == "/properties/suggest":
         return True
     rest = path.removeprefix("/properties/")
-    return rest.isdigit()
+    parts = rest.split("/")
+    if len(parts) == 1 and parts[0].isdigit():
+        return True
+    if len(parts) == 2 and parts[0].isdigit() and parts[1] in {"chain", "passport"}:
+        return True
+    return False
+
+
+def _public_chain_check(path):
+    parts = path.strip("/").split("/")
+    return (
+        len(parts) == 4
+        and parts[0] == "properties"
+        and parts[1].isdigit()
+        and parts[2] == "chain"
+        and parts[3] == "check"
+    )

@@ -82,6 +82,19 @@ export function SiteHeader() {
         <Link to={paths.home} className="shrink-0">
           <Logo size="lg">{ui.brand}</Logo>
         </Link>
+        {ui.header.nav.length > 0 ? (
+          <nav className="flex items-center gap-3">
+            {ui.header.nav.map((item) => (
+              <Link
+                key={item.to}
+                to={item.to}
+                className="font-mono text-[10px] uppercase tracking-[0.14em] text-fg whitespace-nowrap sm:text-[11px]"
+              >
+                {item.label}
+              </Link>
+            ))}
+          </nav>
+        ) : null}
         <div className="hidden min-w-0 flex-1 sm:ml-auto sm:block sm:max-w-96">
           <SearchBar {...searchProps} listId="header-search-hits-desktop" />
         </div>

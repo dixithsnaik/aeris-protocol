@@ -1,7 +1,10 @@
-from flask import Blueprint, g, request
+from flask import Blueprint, g, make_response, request
 
+from views.passport import issue_passport_pdf
 from views.property import (
     approve_verify,
+    attach_chain,
+    check_chain,
     complete_verify,
     create_listing,
     delete_owned,
@@ -10,6 +13,7 @@ from views.property import (
     list_mine,
     list_properties,
     list_watch,
+    listing_chain,
     listing_desk,
     listing_thread,
     send_message,
@@ -103,6 +107,38 @@ def verify_route(pid):
 @bp.post("/<int:pid>/approve")
 def approve_route(pid):
     payload, status = approve_verify(g.user_id, pid)
+    return payload, status
+
+
+@bp.get("/<int:pid>/chain")
+def chain_get_route(pid):
+    payload, status = listing_chain(pid)
+    return payload, status
+
+
+@bp.get("/<int:pid>/passport")
+def passport_download_route(pid):
+    payload, status = issue_passport_pdf(pid)
+    if status != 200:
+        return payload, status
+    code = f"P-{int(pid):04d}"
+    resp = make_response(payload)
+    resp.headers["Content-Type"] = "application/pdf"
+    resp.headers["Content-Disposition"] = f'attachment; filename="aeris-passport-{code}.pdf"'
+    return resp
+
+
+@bp.post("/<int:pid>/chain/check")
+def chain_check_route(pid):
+    body = request.get_json(silent=True) or {}
+    payload, status = check_chain(pid, body.get("token"))
+    return payload, status
+
+
+@bp.post("/<int:pid>/chain")
+def chain_attach_route(pid):
+    body = request.get_json(silent=True) or {}
+    payload, status = attach_chain(g.user_id, pid, body.get("token"))
     return payload, status
 
 

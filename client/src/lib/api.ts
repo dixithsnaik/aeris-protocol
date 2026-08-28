@@ -28,6 +28,9 @@ export type Property = {
   yoy_pct?: number;
   owned?: boolean;
   watchers?: number;
+  chain_token?: string;
+  seal_root?: string;
+  issued_token?: string;
 };
 
 export type PropertyAnalytics = {
@@ -157,6 +160,91 @@ export async function updateListing(
   input: { title: string; location: string; config: string; price: string; area_sqft: string },
 ) {
   return patchJson<Property & { error?: string }>(`/properties/${id}`, input);
+}
+
+export type ChainTrust = {
+  token?: string;
+  hash?: string;
+  height?: number;
+  confirmations?: number;
+  trust?: number;
+  label?: string;
+  error?: string;
+};
+
+export async function fetchChain(id: number) {
+  const { ok, data } = await getJson<ChainTrust>(`/properties/${id}/chain`);
+  if (!ok) return { token: "", trust: 0, label: "none" } as ChainTrust;
+  return data;
+}
+
+export async function checkChainToken(id: number, token: string) {
+  const res = await fetch(apiUrl(`/properties/${id}/chain/check`), {
+    method: "POST",
+    headers: headers(true),
+    body: JSON.stringify({ token }),
+  });
+  const data = (await res.json().catch(() => ({}))) as ChainTrust & { error?: string };
+  return { ok: res.ok, status: res.status, data };
+}
+
+export async function attachChainToken(id: number, token: string) {
+  const res = await fetch(apiUrl(`/properties/${id}/chain`), {
+    method: "POST",
+    headers: headers(true),
+    body: JSON.stringify({ token }),
+  });
+  const data = (await res.json().catch(() => ({}))) as Property & ChainTrust & { error?: string };
+  return { ok: res.ok, status: res.status, data };
+}
+
+export async function approveVerify(id: number) {
+  const res = await fetch(apiUrl(`/properties/${id}/approve`), {
+    method: "POST",
+    headers: headers(true),
+    body: "{}",
+  });
+  const data = (await res.json().catch(() => ({}))) as Property & { error?: string };
+  return { ok: res.ok, status: res.status, data };
+}
+
+export async function downloadPassport(id: number) {
+  const res = await fetch(apiUrl(`/properties/${id}/passport`), { headers: headers() });
+  if (!res.ok) return false;
+  const blob = await res.blob();
+  const hint = res.headers.get("Content-Disposition") || "";
+  const match = /filename="?([^"]+)"?/i.exec(hint);
+  const url = URL.createObjectURL(blob);
+  const link = document.createElement("a");
+  link.href = url;
+  link.download = match?.[1] || `aeris-passport-P-${String(id).padStart(4, "0")}.pdf`;
+  link.click();
+  URL.revokeObjectURL(url);
+  return true;
+}
+
+export type PassportVerdict = {
+  verdict?: string;
+  ok?: boolean;
+  reason?: string;
+  code?: string;
+  title?: string;
+  root?: string;
+  chain_token?: string;
+  trust?: number;
+  label?: string;
+  seals?: { id: string; label: string; hash: string }[];
+  error?: string;
+};
+
+export async function verifyPassportFile(file: File) {
+  const res = await fetch(apiUrl("/passport/verify"), {
+    method: "POST",
+    headers: { ...headers(), "Content-Type": file.type || "application/pdf" },
+    body: await file.arrayBuffer(),
+  });
+  const data = (await res.json().catch(() => ({}))) as PassportVerdict;
+  return { ok: res.ok, data };
 }
 
 export type VerifyPackageId = "basic" | "verified" | "escrow";

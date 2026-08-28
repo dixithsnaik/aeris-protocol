@@ -27,5 +27,7 @@ class Config:
     JWT_EXPIRES_SECONDS = int(os.environ.get("JWT_EXPIRES_SECONDS", "86400"))
     RAZORPAY_KEY_ID = os.environ.get("RAZORPAY_KEY_ID", "")
     RAZORPAY_KEY_SECRET = os.environ.get("RAZORPAY_KEY_SECRET", "")
+    CHAIN_URL = os.environ.get("CHAIN_URL", "http://127.0.0.1:5001")
+    CHAIN_SECRET = os.environ.get("CHAIN_SECRET", "dev-chain-key")
     PUBLIC_PATHS = frozenset({"/health", "/auth/otp", "/auth/verify"})
     PUBLIC_PREFIXES = ("/static",)

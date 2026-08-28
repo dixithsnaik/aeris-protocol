@@ -3,7 +3,6 @@ import { Link, useLocation } from "react-router-dom";
 import check from "../../assets/landing/check.svg";
 import fail from "../../assets/property/fail.svg";
 import pending from "../../assets/property/timeline.svg";
-import shield from "../../assets/landing/shield.svg";
 import { Accordion } from "../patterns/Accordion";
 import { Field } from "../patterns/Field";
 import { Button } from "../ui/Button";
@@ -13,6 +12,8 @@ import { propertyPath, verifyPath } from "../../config/routes";
 import { ui } from "../../config/ui";
 import {
   addInterest,
+  approveVerify,
+  downloadPassport,
   fetchInterested,
   mediaUrl,
   removeInterest,
@@ -21,7 +22,7 @@ import {
 } from "../../lib/api";
 import { getToken } from "../../lib/session";
 import { useAuthGo } from "../../lib/useAuthGo";
-import { areaLabel, auditChecklist, exposure, floorLevel, lawyerPending, ledgerHash, passportId } from "../../lib/propertyDetail";
+import { areaLabel, auditChecklist, exposure, floorLevel, lawyerPending, passportId } from "../../lib/propertyDetail";
 
 const statusIcon = { pass: check, pending, fail };
 const statusClass = {
@@ -45,7 +46,6 @@ export function PropertyOverview({ item, onItem }: Props) {
   const go = useAuthGo();
   const wantEdit = Boolean((useLocation().state as { edit?: boolean } | null)?.edit);
   const owned = Boolean(item.owned);
-  const [hashOpen, setHashOpen] = useState(false);
   const [watching, setWatching] = useState(false);
   const [busy, setBusy] = useState(false);
   const [editing, setEditing] = useState(false);
@@ -109,6 +109,19 @@ export function PropertyOverview({ item, onItem }: Props) {
     onItem({ ...data, owned: true });
     setEditing(false);
   }
+
+  async function onSignoff() {
+    setBusy(true);
+    setError("");
+    const { ok, data } = await approveVerify(item.id);
+    setBusy(false);
+    if (!ok) {
+      setError(data.error ?? "Could not record sign-off");
+      return;
+    }
+    onItem({ ...data, owned: true });
+  }
+
   const stats = [
     { label: copy.carpet, value: areaLabel(item.area_sqft) },
     { label: copy.floor, value: floorLevel(item.id) },
@@ -117,11 +130,17 @@ export function PropertyOverview({ item, onItem }: Props) {
   const audits = auditChecklist(item);
   const statusLabel = { pass: copy.auditPass, pending: copy.auditPending, fail: copy.auditFail };
   const awaiting = lawyerPending(item);
+  const needToken = Boolean(item.verified && !item.chain_token);
   return (
     <div>
       <header className="flex flex-wrap items-center justify-between gap-4">
         <h1 className="min-w-0 font-serif text-3xl text-fg sm:text-4xl">{passportId(item)}</h1>
         <div className="flex shrink-0 flex-wrap items-center gap-3">
+          {owned && (awaiting || needToken) ? (
+            <Button variant="primary" className="px-4 py-2" disabled={busy} onClick={() => void onSignoff()}>
+              {copy.lawyerSignoff}
+            </Button>
+          ) : null}
           {owned && !item.verified && !awaiting ? (
             <Button variant="primary" className="px-4 py-2" onClick={() => go(verifyPath(item.id))}>
               {copy.subscribeVerify}
@@ -140,16 +159,20 @@ export function PropertyOverview({ item, onItem }: Props) {
               {watching ? ui.profile.tracking : ui.profile.track}
             </Button>
           )}
-          <span
-            className={`inline-flex items-center gap-2 px-4 py-2 font-mono text-xs uppercase tracking-[0.12em] whitespace-nowrap sm:text-sm ${
-              item.verified ? "bg-success-soft text-success" : "bg-warn-soft text-warn"
-            }`}
+          <Button
+            variant="outline"
+            className="px-4 py-2"
+            onClick={() =>
+              void downloadPassport(item.id).then((ok) => {
+                if (!ok) setError(copy.downloadFail);
+              })
+            }
           >
-            <Icon src={item.verified ? check : pending} size={18} />
-            {item.verified ? copy.certified : awaiting ? copy.awaitingLawyer : copy.pendingReview}
-          </span>
+            {copy.downloadPassport}
+          </Button>
         </div>
       </header>
+      {copy.rootHint ? <p className="mt-4 max-w-xl font-mono text-xs leading-relaxed text-muted">{copy.rootHint}</p> : null}
       {error && !editing ? <p className="mt-4 font-mono text-xs text-danger">{error}</p> : null}
       {owned && editing ? (
         <form
@@ -236,21 +259,6 @@ export function PropertyOverview({ item, onItem }: Props) {
             })}
           </div>
         </div>
-      </div>
-      <div className="mt-8 flex flex-col gap-4 bg-panel p-5 sm:flex-row sm:items-center sm:p-6">
-        <Icon src={shield} size={22} className="shrink-0" />
-        <div className="min-w-0 flex-1">
-          <h2 className="font-serif text-xl text-fg">{copy.ledgerTitle}</h2>
-          <p className="mt-1 font-mono text-xs text-muted">{copy.ledgerBody}</p>
-          {hashOpen ? (
-            <p className="mt-2 break-all font-mono text-xs text-fg">
-              {copy.hashLabel}: {ledgerHash(item.id)}
-            </p>
-          ) : null}
-        </div>
-        <Button variant="outline" className="shrink-0 px-4 py-2" onClick={() => setHashOpen((v) => !v)}>
-          {copy.viewLedger}
-        </Button>
       </div>
     </div>
   );

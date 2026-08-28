@@ -89,7 +89,7 @@ def count_properties(q, max_budget, configs, verified):
 def fetch_property(pid):
     return fetch_one(
         "SELECT id, title, location, config, price, area_sqft, status, yield_pct, "
-        "yoy_pct, verified, verify_pending, featured, image_url, owner_id FROM properties WHERE id = %s",
+        "yoy_pct, verified, verify_pending, featured, image_url, owner_id, chain_token FROM properties WHERE id = %s",
         (pid,),
     )
 
@@ -139,6 +139,10 @@ def mark_verify_pending(pid):
 
 def mark_verified(pid):
     execute("UPDATE properties SET verified = 1, verify_pending = 0 WHERE id = %s", (pid,))
+
+
+def set_chain_token(pid, token):
+    execute("UPDATE properties SET chain_token = %s WHERE id = %s", (token, pid))
 
 
 def delete_listing(pid):
